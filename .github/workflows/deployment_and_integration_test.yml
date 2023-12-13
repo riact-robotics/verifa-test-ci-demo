@@ -1,0 +1,31 @@
+name: Run Deployment and Integration Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out this repo
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.RIACT_CROSS_REPO_CLONE_TOKEN }}
+
+      - name: pull pre-deployed release image
+        run: docker pull ghcr.io/riact-robotics/wip-debian_release_package/pre-deployed-release-image:latest
+
+
+      - name: start pre-deployed release image
+        run: docker run -it ghcr.io/riact-robotics/wip-debian_release_package/pre-deployed-release-image:latest bash
+
