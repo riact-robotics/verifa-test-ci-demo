@@ -8,9 +8,9 @@ on:
     branches: [ "master" ]
 
 jobs:
-  tests:
+  run-release:
     runs-on: ubuntu-latest
-
+    continue-on-error: true # for demo placeholders
     steps:
       - name: Check out this repo
         uses: actions/checkout@v4
@@ -25,7 +25,56 @@ jobs:
       - name: pull pre-deployed release image
         run: docker pull ghcr.io/riact-robotics/wip-debian_release_package/pre-deployed-release-image:latest
 
-
       - name: start pre-deployed release image
-        run: docker run -it ghcr.io/riact-robotics/wip-debian_release_package/pre-deployed-release-image:latest bash
+        run: docker run -d --name release-image ghcr.io/riact-robotics/wip-debian_release_package/pre-deployed-release-image:latest
+        
+      - name: test deployment running
+        run: |
+          docker exec riactor start
+          docker exec riview start
+          docker exec grep "successful start" | if grep not empty then return 0, else 1
+        
+  deploy-new-component:
+    needs: run-release 
+    runs-on: ubuntu-latest
+    continue-on-error: true # for demo placeholders
+    steps:
+      - name: "placeholder: overwrite old component in release with testing candidate"
+        run: docker cp $GITHUB_WORKSPACE opt/riact/riact_riflex_release/$CURRENT_REPO
+        
+      - name: "placeholder: perform neccessary build/compile steps on the new component"
+        run: docker exec colcon build opt/riact/riact_riflex_release/$CURRENT_REPO
 
+
+  run-deployment-test:
+    needs: deploy-new-component 
+    runs-on: ubuntu-latest
+    continue-on-error: true # for demo placeholders
+    steps:
+      - name: "placeholder: Run deployment test"
+        run: |
+          docker exec riactor restart
+          docker exec riview restart
+          docker exec grep "successful start" | if grep not empty then return 0, else 1
+
+  run-integration-test:
+    needs: run-deployment-test 
+    runs-on: ubuntu-latest
+    continue-on-error: true # for demo placeholders
+    steps:
+      - name: "placeholder: Run integration test"
+        run: |
+          docker exec cd opt/riact/riact_riflex_release
+          docker exec pytest ./src/riact_std_skills
+
+  build-new-release:
+    needs: run-integration-test 
+    runs-on: ubuntu-latest
+    continue-on-error: true # for demo placeholders
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: "placeholder: push new release to ci-release branch"
+        run: docker exec git push opt/riact/riact_riflex_release origin ci-release
+        
+      - name: "placeholder: trigger new build & push workflow in wip-debian_release_package"
+        run: "trigger with repository_dispatch to wip-debian_release_packages workflow for rebuilding the release image, or just have the same workflow here"
